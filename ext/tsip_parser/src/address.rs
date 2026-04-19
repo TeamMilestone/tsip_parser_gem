@@ -10,6 +10,17 @@ pub struct Address {
 }
 
 impl Address {
+    /// Allocate an empty `TsipParser::Address` — no display_name, no uri,
+    /// no params. Paired with the Ruby-side setters so callers can
+    /// assemble an Address without a placeholder parse, which is the hot
+    /// path used by tsip-core's bridge `Address.build` helper
+    /// (V0_2_3_HANDOFF).
+    fn empty() -> Self {
+        Address {
+            inner: tsip_parser::Address::default(),
+        }
+    }
+
     fn parse(input: RString) -> Result<Self, Error> {
         let ruby = unsafe { Ruby::get_unchecked() };
         let bytes = unsafe { input.as_slice() };
@@ -76,6 +87,10 @@ impl Address {
 
 pub fn init(ruby: &Ruby, parent: &RModule) -> Result<(), Error> {
     let class = parent.define_class("Address", ruby.class_object())?;
+    // 0-arg `new` for tsip-core bridge Address.build. The magnus::wrap
+    // macro does not register a Ruby allocator, so without this line the
+    // default `Class#new` path raises "allocator undefined".
+    class.define_singleton_method("new", function!(Address::empty, 0))?;
     class.define_singleton_method("parse", function!(Address::parse, 1))?;
     class.define_singleton_method("parse_many", function!(Address::parse_many, 1))?;
     class.define_method("param", method!(Address::param, 1))?;

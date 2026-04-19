@@ -54,4 +54,24 @@ class TestAddress < Minitest::Test
       TsipParser::Address.parse('"Alice" <sip:alice@example.com')
     end
   end
+
+  # v0.2.3 — Address.new 0-arg allocator (tsip-core bridge Address.build)
+
+  def test_new_returns_empty_address
+    a = TsipParser::Address.new
+    assert_nil a.display_name
+    assert_nil a.uri
+    assert_equal({}, a.params)
+    # crate's Display writes `<` + inner uri (if any) + `>` + params.
+    # Empty uri → no inner content, no params → bare angle brackets.
+    assert_equal "<>", a.to_s
+  end
+
+  def test_new_accepts_setters
+    a = TsipParser::Address.new
+    a.display_name = "Alice"
+    a.uri = TsipParser::Uri.parse("sip:alice@example.com")
+    a.params["tag"] = "xyz"
+    assert_equal '"Alice" <sip:alice@example.com>;tag=xyz', a.to_s
+  end
 end

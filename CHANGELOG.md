@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.2.3] - 2026-04-19
+
+No crate change (still `tsip-parser = "0.2"`). Gem-only release that exposes
+a 0-arg `Address.new` allocator so tsip-core's `Address.build` bridge can
+drop its placeholder parse (`parse("<sip:_@_>")`) — ~16k placeholder
+parses/s eliminated at 8k cps dialog throughput.
+
+### Added
+- `TsipParser::Address.new` — 0-arg allocator returning an empty Address
+  (`display_name: nil`, `uri: nil`, `params: {}`). Use with the existing
+  setters / memoized `params` Hash to assemble:
+  ```ruby
+  a = TsipParser::Address.new
+  a.display_name = "Alice"
+  a.uri = TsipParser::Uri.parse("sip:alice@example.com")
+  a.params["tag"] = "xyz"
+  a.to_s  # => "\"Alice\" <sip:alice@example.com>;tag=xyz"
+  ```
+  Implementation: the `magnus::wrap` macro does not register a Ruby
+  allocator, so `new` is registered as a 0-arg singleton method returning
+  `tsip_parser::Address::default()`. The empty state's `to_s` is `"<>"`
+  (bare angle brackets) per the crate's `Display` impl.
+
+### Not added (per HANDOFF §7)
+- `TsipParser::Uri.new` — tsip-core always constructs `Uri` via `parse`.
+- kwargs constructor on `Address.new(display_name:, uri:, params:)` —
+  tsip-core's bridge `Address.build(...)` does the kwargs mapping.
+
 ## [0.2.2] - 2026-04-19
 
 No crate change (still `tsip-parser = "0.2"`, resolved to 0.2.1). Gem-only
