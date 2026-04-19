@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.2.0] - 2026-04-19
+
+Tracks upstream `tsip-parser` crate 0.2.0. Dependency pin moves from `~> 0.1`
+to `~> 0.2`. **Behavior change, not API change** — the Ruby surface is
+unchanged, but inputs that 0.1.1 rejected with `ParseError::InvalidHost`
+may now parse successfully.
+
+### Crate 0.2.0 semantics (relevant to gem users)
+- **Permissive parse**: accepts pct-encoded userinfo specials, `<` in param
+  keys, and leading/trailing whitespace in URI-level param/header values.
+  Converges with the tsip-core pure-Ruby parser's accepted-input set.
+- Round-trip stability is now enforced on the **render** side: pct-decoded
+  fields (userinfo, URI header key/value) are pct-escaped when serializing
+  back via `to_s`. Callers who previously saw `ParseError` on raw
+  user-provided SIP URIs will now get a parsed `Uri` whose `to_s` produces
+  a stable canonical form.
+- Narrow parse-time rejections remain for bytes literal param storage
+  cannot round-trip: `>` in any param, `?` in URI-level params.
+
+### Measured (Ruby 4.0.1, M1 macOS, release build; crate 0.2.0)
+- `Uri.parse` — 654k ips vs `TsipCore::Sip::Uri.parse` 41k ips → **16.1× faster**.
+- `Address.parse` — 695k ips vs `TsipCore::Sip::Address.parse` 41k ips → **16.8× faster**.
+- Permissive validation recovers most of 0.1.1's validation overhead;
+  numbers are back in line with 0.1.0.
+
 ## [0.1.0] - 2026-04-19
 
 Initial release. Thin Ruby binding around the `tsip-parser` Rust crate (≥ 0.1.1;
