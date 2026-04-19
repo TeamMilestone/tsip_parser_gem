@@ -53,8 +53,8 @@ Measured on Ruby 4.0.1, M1 macOS, release build:
 
 | endpoint          | tsip_parser  | tsip-core     | speedup |
 |-------------------|--------------|---------------|---------|
-| `Uri.parse`       | 654k ips     | 41k ips       | **16.1×** |
-| `Address.parse`   | 695k ips     | 41k ips       | **16.8×** |
+| `Uri.parse`       | 646k ips     | 41k ips       | **15.8×** |
+| `Address.parse`   | 694k ips     | 41k ips       | **16.8×** |
 | `uri.param("t")`  | 2.07M ips *  | 125k ips *    | **16.5×** |
 | `address.tag`     | 1.99M ips *  | 139k ips *    | **14.4×** |
 
@@ -137,9 +137,10 @@ for serialization so mutations round-trip correctly.
 ## Rust crate version
 
 Pinned in `ext/tsip_parser/Cargo.toml` to `tsip-parser = "0.2"`, currently
-resolved to 0.2.0 (permissive parse, render-side pct-escape). Gem
-major.minor tracks the crate's major.minor; a gem major bump happens when
-the crate breaks behavior, not just when it breaks API.
+resolved to 0.2.1 (permissive parse, render-side pct-escape covering
+URI-level param keys/values). Gem major.minor tracks the crate's
+major.minor; a gem major bump happens when the crate breaks behavior, not
+just when it breaks API.
 
 ## Development
 

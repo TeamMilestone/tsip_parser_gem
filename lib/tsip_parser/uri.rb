@@ -32,18 +32,25 @@ module TsipParser
       buf << scheme << ":"
       u = user
       if u
-        buf << u
+        Uri.append_pct_escaped(buf, u)
         pw = password
-        buf << ":" << pw if pw
+        if pw
+          buf << ":"
+          Uri.append_pct_escaped(buf, pw)
+        end
         buf << "@"
       end
       append_bracket_host(buf)
       p = port
       buf << ":" << p.to_s if p
       params.each do |k, v|
-        buf << ";" << k
+        buf << ";"
+        Uri.append_param_escaped(buf, k)
         vs = v.to_s
-        buf << "=" << vs unless vs.empty?
+        unless vs.empty?
+          buf << "="
+          Uri.append_param_escaped(buf, vs)
+        end
       end
       h = headers
       unless h.empty?
@@ -52,7 +59,9 @@ module TsipParser
         h.each do |k, v|
           buf << "&" unless first
           first = false
-          buf << k << "=" << v.to_s
+          Uri.append_pct_escaped(buf, k)
+          buf << "="
+          Uri.append_pct_escaped(buf, v.to_s)
         end
       end
       buf
@@ -65,6 +74,40 @@ module TsipParser
       else
         buf << h
       end
+    end
+
+    # Mirror crate 0.2.1's `append_pct_escaped` — used for fields that are
+    # pct-decoded on parse (userinfo, URI header key/value). Uppercase hex
+    # because re-parse re-decodes, so case doesn't affect the fixed point.
+    PCT_ESCAPE_CHARS = "@:;?<>%&= \t\r\n"
+    def self.append_pct_escaped(buf, src)
+      src.each_char do |ch|
+        if PCT_ESCAPE_CHARS.include?(ch)
+          buf << format("%%%02X", ch.ord)
+        else
+          buf << ch
+        end
+      end
+      buf
+    end
+
+    # Mirror crate 0.2.1's `append_param_escaped`. URI-level params are
+    # stored literally (no pct-decode on parse), so only bytes that would
+    # re-tokenize the URI body on re-parse need escaping. `%` is NOT
+    # escaped here: the stored value already contains any `%` the user put
+    # in, and escaping `%` would turn `%3c` into `%253c` on re-render.
+    # Lowercase hex — on re-parse, `downcase_str` lowercases keys, so
+    # matching case reaches a fixed point in one cycle rather than two.
+    PARAM_ESCAPE_CHARS = ";?&=<>"
+    def self.append_param_escaped(buf, src)
+      src.each_char do |ch|
+        if PARAM_ESCAPE_CHARS.include?(ch)
+          buf << format("%%%02x", ch.ord)
+        else
+          buf << ch
+        end
+      end
+      buf
     end
 
     def ==(other)

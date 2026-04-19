@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.2.1] - 2026-04-19
+
+Tracks upstream `tsip-parser` crate 0.2.1. Dependency pin unchanged (`~> 0.2`).
+
+### Crate 0.2.1 semantics
+- Accepts URI-level param keys/values containing `; ? & = < >`. Round-trip
+  stability comes from render-side pct-escape with lowercase hex (so the
+  key downcase on re-parse reaches a fixed point in one cycle). `%` is
+  deliberately *not* escaped — params are stored literally, so escaping `%`
+  would break the fixed point.
+- Closes the last xoracle parity case (`sip:alice@host;<evil>=1`) vs the
+  Ruby tsip-core reference.
+
+### Gem-side
+- **Ruby `Uri#append_to` now mirrors the crate's render-side escape.**
+  Previously the Ruby serialization path (triggered once `params` or
+  `headers` was touched) wrote fields literally, which diverged from the
+  Rust `Display` output for inputs containing `@ : ; ? < > % & =` or
+  whitespace. After this release, fast-path (`to_s` without field access)
+  and slow-path (`to_s` after mutation) produce identical output.
+  - `append_pct_escaped` — userinfo + URI header key/value, uppercase hex,
+    escapes `@ : ; ? < > % & = space tab CR LF`.
+  - `append_param_escaped` — URI-level param key/value, lowercase hex,
+    escapes `; ? & = < >`.
+
+### Measured (Ruby 4.0.1, M1 macOS, release build; crate 0.2.1)
+- `Uri.parse` — 646k ips vs `TsipCore::Sip::Uri.parse` 41k ips → **15.8× faster**.
+- `Address.parse` — 694k ips vs `TsipCore::Sip::Address.parse` 41k ips → **16.8× faster**.
+- Escape work only runs on the slow path (fields mutated), so parse-only
+  throughput is unchanged from 0.2.0.
+
 ## [0.2.0] - 2026-04-19
 
 Tracks upstream `tsip-parser` crate 0.2.0. Dependency pin moves from `~> 0.1`
