@@ -1,0 +1,11 @@
+# This Cargo.toml is here so IDEs and cargo-aware tools see the workspace.
+# Extension deps live in ext/tsip_parser/Cargo.toml.
+
+[workspace]
+members = ["./ext/tsip_parser"]
+resolver = "2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = 3

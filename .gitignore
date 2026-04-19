@@ -1,0 +1,13 @@
+/.bundle/
+/vendor/
+/target/
+/tmp/
+/pkg/
+*.bundle
+*.so
+*.dylib
+*.o
+*.dSYM
+Gemfile.lock
+lib/tsip_parser/tsip_parser.bundle
+lib/tsip_parser/tsip_parser.so

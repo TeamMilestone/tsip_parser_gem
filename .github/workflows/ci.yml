@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ['3.1', '3.2', '3.3', '3.4']
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Compile native extension
+        run: bundle exec rake compile
+
+      - name: Run tests
+        run: bundle exec rake test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Clippy
+        run: cargo clippy --manifest-path ext/tsip_parser/Cargo.toml -- -D warnings
+
+      - name: Rust format check
+        run: cargo fmt --manifest-path ext/tsip_parser/Cargo.toml -- --check
