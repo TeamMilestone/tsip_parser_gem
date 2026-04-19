@@ -2,6 +2,7 @@ use magnus::{Error, Ruby};
 
 mod address;
 mod error;
+mod message;
 mod uri;
 
 #[magnus::init]
@@ -11,5 +12,6 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     let module = ruby.define_module("TsipParser")?;
     uri::init(ruby, &module)?;
     address::init(ruby, &module)?;
+    message::init(ruby, &module)?;
     Ok(())
 }

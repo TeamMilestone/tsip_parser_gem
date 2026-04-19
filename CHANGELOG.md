@@ -1,5 +1,53 @@
 # Changelog
 
+## [0.3.0] - 2026-04-19
+
+Tracks upstream `tsip-parser` crate 0.3.0. Dependency pin moves from `~> 0.2`
+to `~> 0.3`. Exposes the crate's new SIP message framing parser so tsip-core's
+bridge can drop its pure-Ruby `Sip::Parser.parse` — the last 15~18% self-time
+frame in stackprof for bridge-ON throughput (7,239 cps → target 7,700~8,000).
+
+### Added
+- `TsipParser::Message.parse(raw)` — RFC 3261 message framing. Returns a
+  plain Hash (no wrapper class) so tsip-core can stuff the values straight
+  into `Sip::Message` ivars:
+  ```ruby
+  h = TsipParser::Message.parse(invite_bytes)
+  # => {
+  #   kind: :request,
+  #   method: "INVITE",
+  #   request_uri: "sip:bob@biloxi.example.com",
+  #   sip_version: "SIP/2.0",
+  #   headers: { "Via" => [...], "Call-ID" => [...], ... },
+  #   body: "".b  # ASCII-8BIT
+  # }
+  ```
+  Responses carry `:status_code` (Integer) and `:reason_phrase` instead of
+  `:method` / `:request_uri`.
+
+### Contract details
+- `headers` keys are canonical names (compact forms expanded: `v` → `"Via"`,
+  `i` → `"Call-ID"`, `l` → `"Content-Length"`, ...).
+- `headers` values are `Array<String>` — multiple same-named headers keep
+  wire order (Via multi-routing depends on this).
+- `body` is always `ASCII-8BIT` (forced on the Rust side via
+  `enc_str_new(&bytes, ascii8bit_encoding())`).
+- `method` is uppercase-normalised.
+- Content-Length validation happens in the crate; malformed values raise
+  `TsipParser::ParseError` at parse time.
+
+### Not added
+- `TsipParser::Message.new` — tsip-core constructs `Sip::Message` from the
+  returned Hash; no 0-arg allocator needed.
+- `Message#to_s` / re-render — network layer re-uses the original bytes;
+  the crate's `Message` has no `Display` impl.
+- Structured header value parsing (Via/CSeq/Contact/...) — raw String
+  preserved, unchanged from pre-0.3 behavior.
+
+### Crate 0.3.0 reference
+- 48 message tests (28 normal / 20 malformed) + 30s fuzz 4.78M runs panic=0.
+- `message_parse_invite_10h` bench 1.48 µs.
+
 ## [0.2.3] - 2026-04-19
 
 No crate change (still `tsip-parser = "0.2"`). Gem-only release that exposes

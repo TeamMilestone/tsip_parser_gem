@@ -263,9 +263,9 @@ dependencies = [
 
 [[package]]
 name = "tsip-parser"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "497194931972ecfd7225824d9e85a0d4e25d2fe731390338917fa65a36693bad"
+checksum = "540107322efa842aa727b87fb3f29b9ea72ccf724465d29249634c52f31cbf70"
 
 [[package]]
 name = "tsip_parser"

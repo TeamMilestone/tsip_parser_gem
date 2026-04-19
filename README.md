@@ -21,6 +21,13 @@ a = TsipParser::Address.parse('"Alice" <sip:alice@atlanta.com>;tag=abc')
 a.display_name  # => "Alice"
 a.uri.user      # => "alice"
 a.tag           # => "abc"
+
+h = TsipParser::Message.parse(invite_bytes)
+h[:kind]                    # => :request
+h[:method]                  # => "INVITE"
+h[:request_uri]             # => "sip:bob@biloxi.example.com"
+h[:headers]["Call-ID"]      # => ["a84b4c76e66710"]
+h[:body].encoding           # => #<Encoding:ASCII-8BIT>
 ```
 
 ## Install
@@ -111,6 +118,30 @@ a.param("expires")
 TsipParser::Address.parse_many([...])
 ```
 
+### `TsipParser::Message`
+
+```ruby
+h = TsipParser::Message.parse(raw)    # => Hash, or raises ParseError
+
+# Request:
+# { kind: :request, method: "INVITE", request_uri: "sip:...",
+#   sip_version: "SIP/2.0", headers: { ... }, body: "".b }
+
+# Response:
+# { kind: :response, sip_version: "SIP/2.0", status_code: 200,
+#   reason_phrase: "OK", headers: { ... }, body: "".b }
+```
+
+`headers` keys are canonical names (compact forms `v`/`i`/`l`/... are
+expanded). Values are `Array<String>` preserving wire order for
+duplicate-named headers (Via multi-routing). `body` is always `ASCII-8BIT`.
+Content-Length validation, empty-message / oversize / malformed start-line
+detection all raise `TsipParser::ParseError` at parse time.
+
+`Message.parse` returns a Hash (not a wrapper class) by design: tsip-core's
+bridge consumes it directly via `instance_variable_set(:@headers, ...)`
+without an intermediate allocation.
+
 ### `TsipParser::ParseError`
 
 Subclass of `ArgumentError`. Raised on:
@@ -141,11 +172,11 @@ for serialization so mutations round-trip correctly.
 
 ## Rust crate version
 
-Pinned in `ext/tsip_parser/Cargo.toml` to `tsip-parser = "0.2"`, currently
-resolved to 0.2.1 (permissive parse, render-side pct-escape covering
-URI-level param keys/values). Gem major.minor tracks the crate's
-major.minor; a gem major bump happens when the crate breaks behavior, not
-just when it breaks API.
+Pinned in `ext/tsip_parser/Cargo.toml` to `tsip-parser = "0.3"`, currently
+resolved to 0.3.0 (adds SIP message framing parser on top of 0.2.1's
+permissive Uri/Address + render-side pct-escape). Gem major.minor tracks
+the crate's major.minor; a gem major bump happens when the crate breaks
+behavior, not just when it breaks API.
 
 ## Development
 

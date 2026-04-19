@@ -9,4 +9,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 magnus = { version = "0.8" }
-tsip-parser = "0.2"
+tsip-parser = "0.3"
