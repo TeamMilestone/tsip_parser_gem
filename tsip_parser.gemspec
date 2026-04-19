@@ -5,14 +5,14 @@ require_relative "lib/tsip_parser/version"
 Gem::Specification.new do |spec|
   spec.name     = "tsip_parser"
   spec.version  = TsipParser::VERSION
-  spec.authors  = ["Team Milestone"]
-  spec.email    = ["dev@team-milestone.io"]
+  spec.authors  = ["Wonsup Lee"]
+  spec.email    = ["alfonso@team-milestone.io"]
 
   spec.summary     = "RFC 3261 SIP URI and Address parser for Ruby, powered by Rust."
   spec.description = "Thin Ruby binding around the tsip-parser Rust crate. " \
                      "Provides RFC 3261 §19.1 (SIP URI) and §25.1 (Address) " \
-                     "parsing and serialization at ~25-35× the speed of the " \
-                     "pure-Ruby reference in tsip-core."
+                     "parsing and serialization ~15× faster than the pure-Ruby " \
+                     "reference in tsip-core."
   spec.homepage    = "https://github.com/TeamMilestone/tsip_parser_gem"
   spec.license     = "MIT"
   spec.required_ruby_version     = ">= 3.0.0"
