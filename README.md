@@ -88,6 +88,11 @@ u.header("subject")    # => String | nil
 
 # Batch parse
 TsipParser::Uri.parse_many([str1, str2, ...])  # => Array<Uri>
+
+# Low-level scanner access (exposed for tsip-core class-alias integration)
+TsipParser::Uri.parse_range(str, from, to)           # => Uri; byte-range parse
+TsipParser::Uri.parse_param("transport=tls", h)      # => nil; writes into h
+TsipParser::Uri.parse_host_port("[::1]:5060")        # => ["::1", 5060]
 ```
 
 ### `TsipParser::Address`

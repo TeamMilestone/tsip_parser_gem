@@ -26,6 +26,65 @@ impl Uri {
         Ok(Uri { inner: u })
     }
 
+    /// Parse a byte-range of an already-held string, matching the crate's
+    /// `Uri::parse_range`. Enables the tsip-core `Address.parse` pattern of
+    /// passing `(full, lt+1, gt)` without allocating a substring. Exposed so
+    /// tsip-core can drop its bridge shim and alias `TsipCore::Sip::Uri`
+    /// directly onto this class.
+    fn parse_range(input: RString, from: usize, to: usize) -> Result<Self, Error> {
+        let ruby = unsafe { Ruby::get_unchecked() };
+        let bytes = unsafe { input.as_slice() };
+        let s = std::str::from_utf8(bytes)
+            .map_err(|_| Error::new(crate::error::parse_error_class(&ruby), "invalid UTF-8"))?;
+        if from > to || to > s.len() {
+            return Err(Error::new(
+                crate::error::parse_error_class(&ruby),
+                "parse_range: offset out of bounds",
+            ));
+        }
+        // Guard against slicing through a multi-byte codepoint — the crate
+        // scanner walks bytes and the Ruby side may have computed offsets
+        // with byte operations on UTF-8 content.
+        if !s.is_char_boundary(from) || !s.is_char_boundary(to) {
+            return Err(Error::new(
+                crate::error::parse_error_class(&ruby),
+                "parse_range: offset not on a UTF-8 char boundary",
+            ));
+        }
+        let u = tsip_parser::Uri::parse_range(s, from, to)
+            .map_err(|e| crate::error::to_ruby(&ruby, e))?;
+        Ok(Uri { inner: u })
+    }
+
+    /// Parse one `key[=value]` segment into an existing Ruby Hash. Mirrors
+    /// the crate's `Uri::parse_param`. Used by tsip-core `Via.parse` which
+    /// splits a parameter list and feeds each segment through this call.
+    fn parse_param(raw: RString, target: RHash) -> Result<(), Error> {
+        let ruby = unsafe { Ruby::get_unchecked() };
+        let bytes = unsafe { raw.as_slice() };
+        let s = std::str::from_utf8(bytes)
+            .map_err(|_| Error::new(crate::error::parse_error_class(&ruby), "invalid UTF-8"))?;
+        let mut v: Vec<(String, String)> = Vec::with_capacity(1);
+        tsip_parser::Uri::parse_param(s, &mut v)
+            .map_err(|e| crate::error::to_ruby(&ruby, e))?;
+        for (k, val) in v {
+            target.aset(k, val)?;
+        }
+        Ok(())
+    }
+
+    /// Parse a `host[:port]` fragment — `"example.com:5060"`, `"[::1]:5060"`,
+    /// `"host"`. Returns `[host, port_or_nil]`. Mirrors the crate's
+    /// `Uri::parse_host_port`. tsip-core `Via.parse` uses this for the
+    /// sent-by tuple.
+    fn parse_host_port(hp: RString) -> Result<(String, Option<u16>), Error> {
+        let ruby = unsafe { Ruby::get_unchecked() };
+        let bytes = unsafe { hp.as_slice() };
+        let s = std::str::from_utf8(bytes)
+            .map_err(|_| Error::new(crate::error::parse_error_class(&ruby), "invalid UTF-8"))?;
+        tsip_parser::Uri::parse_host_port(s).map_err(|e| crate::error::to_ruby(&ruby, e))
+    }
+
     /// Parse an Array of strings in a single FFI call. Saves the per-call
     /// Ruby→Rust dispatch cost for bulk workloads (Via/Route header lists,
     /// registrar traffic).
@@ -118,6 +177,10 @@ pub fn init(ruby: &Ruby, parent: &RModule) -> Result<(), Error> {
     let class = parent.define_class("Uri", ruby.class_object())?;
     class.define_singleton_method("parse", function!(Uri::parse, 1))?;
     class.define_singleton_method("parse_many", function!(Uri::parse_many, 1))?;
+    // v0.2.2: class-alias integration surface for tsip-core.
+    class.define_singleton_method("parse_range", function!(Uri::parse_range, 3))?;
+    class.define_singleton_method("parse_param", function!(Uri::parse_param, 2))?;
+    class.define_singleton_method("parse_host_port", function!(Uri::parse_host_port, 1))?;
     class.define_method("param", method!(Uri::param, 1))?;
     class.define_method("header", method!(Uri::header, 1))?;
     class.define_method("scheme", method!(Uri::scheme, 0))?;

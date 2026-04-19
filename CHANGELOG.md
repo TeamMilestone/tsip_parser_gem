@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.2] - 2026-04-19
+
+No crate change (still `tsip-parser = "0.2"`, resolved to 0.2.1). Gem-only
+release that exposes three crate class methods so tsip-core can switch from
+its per-parse bridge shim to a direct `TsipCore::Sip::Uri = TsipParser::Uri`
+class alias. Eliminates the -2.8% throughput regression measured in the
+tsip-core integration bench on 2026-04-19.
+
+### Added
+- `TsipParser::Uri.parse_range(str, from, to)` — byte-range parse that
+  mirrors `tsip_parser::Uri::parse_range`. Used by tsip-core's
+  `Address.parse` to parse the URI inside `<...>` without substring alloc.
+  Validates offsets + UTF-8 boundary; raises `ParseError` on out-of-range
+  or mid-codepoint offsets.
+- `TsipParser::Uri.parse_param(raw, hash)` — parse one `key[=value]`
+  segment into an existing Ruby Hash. Used by tsip-core `Via.parse` on
+  each semicolon-split segment. Key-only segments insert `""`; empty raw
+  is a no-op; duplicate keys overwrite.
+- `TsipParser::Uri.parse_host_port(str)` — parse a `host[:port]` fragment
+  including the bracketed IPv6 form (`[::1]:5060`). Returns
+  `[host, port_or_nil]`.
+
+### Not added (deliberately, per HANDOFF §3.3)
+- `Address.new(display_name:, uri:, params:)` kwargs constructor. tsip-core
+  will add an `Address.build(...)` helper on its side instead.
+
 ## [0.2.1] - 2026-04-19
 
 Tracks upstream `tsip-parser` crate 0.2.1. Dependency pin unchanged (`~> 0.2`).
